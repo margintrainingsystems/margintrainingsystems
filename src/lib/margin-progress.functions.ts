@@ -77,7 +77,7 @@ export const completeLesson = createServerFn({ method: "POST" })
       await supabase.from("margincoins_transactions").insert({
         user_id: userId,
         amount: coins,
-        type: "earned",
+        reason: "lesson_completed",
         description: "Lección completada",
       });
     }
@@ -115,7 +115,7 @@ export const redeemReward = createServerFn({ method: "POST" })
     const { error: redeemErr } = await supabase.from("reward_redemptions").insert({
       user_id: userId,
       reward_id: reward.id,
-      cost_at_redemption: reward.cost_coins,
+      cost_coins: reward.cost_coins,
     });
     if (redeemErr) throw new Error(redeemErr.message);
 
@@ -127,7 +127,7 @@ export const redeemReward = createServerFn({ method: "POST" })
     await supabase.from("margincoins_transactions").insert({
       user_id: userId,
       amount: -reward.cost_coins,
-      type: "spent",
+      reason: "reward_redeemed",
       description: `Canjeaste: ${reward.title}`,
     });
 

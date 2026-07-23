@@ -53,8 +53,14 @@ export type Database = {
           created_at: string
           id: string
           logo_url: string | null
+          max_employees: number
+          mp_preapproval_id: string | null
+          mp_subscription_id: string | null
           name: string
           owner_id: string | null
+          plan: string
+          subscription_expires_at: string | null
+          subscription_status: string
           type: string | null
         }
         Insert: {
@@ -62,8 +68,14 @@ export type Database = {
           created_at?: string
           id?: string
           logo_url?: string | null
+          max_employees?: number
+          mp_preapproval_id?: string | null
+          mp_subscription_id?: string | null
           name: string
           owner_id?: string | null
+          plan?: string
+          subscription_expires_at?: string | null
+          subscription_status?: string
           type?: string | null
         }
         Update: {
@@ -71,11 +83,61 @@ export type Database = {
           created_at?: string
           id?: string
           logo_url?: string | null
+          max_employees?: number
+          mp_preapproval_id?: string | null
+          mp_subscription_id?: string | null
           name?: string
           owner_id?: string | null
+          plan?: string
+          subscription_expires_at?: string | null
+          subscription_status?: string
           type?: string | null
         }
         Relationships: []
+      }
+      invitation_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          establishment_id: string
+          expires_at: string | null
+          id: string
+          max_uses: number
+          position_hint: string | null
+          uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          establishment_id: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          position_hint?: string | null
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          establishment_id?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          position_hint?: string | null
+          uses?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_codes_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lessons: {
         Row: {
@@ -156,6 +218,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_events: {
+        Row: {
+          created_at: string
+          establishment_id: string | null
+          event_type: string
+          external_id: string | null
+          id: string
+          payload: Json
+          provider: string
+        }
+        Insert: {
+          created_at?: string
+          establishment_id?: string | null
+          event_type: string
+          external_id?: string | null
+          id?: string
+          payload: Json
+          provider?: string
+        }
+        Update: {
+          created_at?: string
+          establishment_id?: string | null
+          event_type?: string
+          external_id?: string | null
+          id?: string
+          payload?: Json
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -454,6 +554,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      plan_max_employees: { Args: { _plan: string }; Returns: number }
+      redeem_invitation_code: {
+        Args: { _code: string; _user_id: string }
+        Returns: {
+          out_establishment_id: string
+          out_position: string
+        }[]
       }
     }
     Enums: {

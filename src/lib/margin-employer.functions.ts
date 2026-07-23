@@ -172,7 +172,7 @@ export const listEmployees = createServerFn({ method: "GET" })
 
     const { data: employees } = await supabase
       .from("profiles")
-      .select("id, full_name, position, xp, level, margincoins, streak_days, created_at")
+      .select("id, full_name, position, total_xp, level, margincoins, streak_days, created_at")
       .eq("establishment_id", est.id);
 
     return {
@@ -185,7 +185,7 @@ export type Employee = {
   id: string;
   full_name: string | null;
   position: string | null;
-  xp: number;
+  total_xp: number;
   level: number;
   margincoins: number;
   streak_days: number;

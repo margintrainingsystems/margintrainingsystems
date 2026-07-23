@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { useServerFn } from "@tanstack/react-start";
 import { completeLesson } from "@/lib/margin-progress.functions";
-import { ChevronLeft, CheckCircle2, Coins, PlayCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, CheckCircle2, PlayCircle, Loader2 } from "lucide-react";
+import { MargincoinIcon } from "@/lib/margin-coin";
 
 export const Route = createFileRoute("/_authenticated/modules/$moduleId")({
   head: () => ({
@@ -191,7 +192,11 @@ function ModuleDetailPage() {
                 disabled={busy}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-coin px-4 py-2 text-sm font-bold text-coin-foreground shadow-glow disabled:opacity-60"
               >
-                {busy ? <Loader2 size={15} className="animate-spin" /> : <Coins size={15} />}
+                {busy ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <MargincoinIcon size={15} />
+                )}
                 Marcar completada
               </button>
             </div>

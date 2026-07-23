@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import type { ComponentType } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
-import { Flame, Trophy, Coins, BookOpen, ArrowRight, Sparkles } from "lucide-react";
+import { Flame, Trophy, BookOpen, ArrowRight, Sparkles } from "lucide-react";
+import { MargincoinIcon } from "@/lib/margin-coin";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -85,7 +87,7 @@ function DashboardPage() {
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon={Coins}
+          icon={MargincoinIcon}
           label="Margincoins"
           value={profile?.margincoins.toLocaleString("es-AR") ?? "0"}
           tint="coin"
@@ -168,7 +170,7 @@ function DashboardPage() {
                 </p>
               )}
               <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-coin">
-                <Coins size={14} /> +{m.coin_reward ?? 0}
+                <MargincoinIcon size={14} /> +{m.coin_reward ?? 0}
               </div>
             </Link>
           ))}
@@ -208,7 +210,7 @@ function StatCard({
   hint,
   tint,
 }: {
-  icon: typeof Coins;
+  icon: ComponentType<{ size?: number; className?: string }>;
   label: string;
   value: string;
   hint?: string;

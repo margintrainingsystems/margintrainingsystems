@@ -576,6 +576,7 @@ export type Database = {
         | "reward_redeemed"
         | "admin_adjustment"
         | "signup_bonus"
+        | "level_up_bonus"
       lesson_type:
         | "reading"
         | "video"
@@ -726,6 +727,7 @@ export const Constants = {
         "reward_redeemed",
         "admin_adjustment",
         "signup_bonus",
+        "level_up_bonus",
       ],
       lesson_type: [
         "reading",

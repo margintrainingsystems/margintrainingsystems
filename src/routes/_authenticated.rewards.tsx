@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { redeemReward } from "@/lib/margin-progress.functions";
-import { Coins, Gift, Loader2 } from "lucide-react";
+import { Gift, Loader2 } from "lucide-react";
+import { MargincoinIcon } from "@/lib/margin-coin";
 
 export const Route = createFileRoute("/_authenticated/rewards")({
   head: () => ({
@@ -96,7 +97,7 @@ function RewardsPage() {
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full bg-gradient-coin px-4 py-2 font-bold text-coin-foreground shadow-glow">
-          <Coins size={16} />
+          <MargincoinIcon size={16} />
           {coins.toLocaleString("es-AR")} disponibles
         </div>
       </header>
@@ -128,7 +129,7 @@ function RewardsPage() {
               )}
               <div className="mt-4 flex items-center justify-between">
                 <span className="inline-flex items-center gap-1 font-bold text-coin">
-                  <Coins size={14} /> {r.cost_coins.toLocaleString("es-AR")}
+                  <MargincoinIcon size={14} /> {r.cost_coins.toLocaleString("es-AR")}
                 </span>
                 <button
                   onClick={() => handleRedeem(r)}

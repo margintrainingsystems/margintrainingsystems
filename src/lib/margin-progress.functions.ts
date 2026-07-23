@@ -60,8 +60,17 @@ export const completeLesson = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const newXp = (profile?.total_xp ?? 0) + xp;
-    const newCoins = (profile?.margincoins ?? 0) + coins;
     const newLevel = Math.max(1, Math.floor(newXp / 500) + 1);
+
+    // Bonus de margincoins por subir de nivel: 50 * (nivel - 1) por CADA nivel ganado
+    // en esta llamada (cubre el caso, poco probable, de saltar más de un nivel de una vez).
+    const previousLevel = Math.max(1, Math.floor((profile?.total_xp ?? 0) / 500) + 1);
+    let levelUpBonus = 0;
+    for (let lvl = previousLevel + 1; lvl <= newLevel; lvl++) {
+      levelUpBonus += 50 * (lvl - 1);
+    }
+
+    const newCoins = (profile?.margincoins ?? 0) + coins + levelUpBonus;
 
     await supabase
       .from("profiles")
@@ -82,7 +91,22 @@ export const completeLesson = createServerFn({ method: "POST" })
       });
     }
 
-    return { alreadyCompleted: false, xpAwarded: xp, coinsAwarded: coins };
+    if (levelUpBonus > 0) {
+      await supabase.from("margincoins_transactions").insert({
+        user_id: userId,
+        amount: levelUpBonus,
+        reason: "level_up_bonus",
+        description: `Subiste a nivel ${newLevel}`,
+      });
+    }
+
+    return {
+      alreadyCompleted: false,
+      xpAwarded: xp,
+      coinsAwarded: coins,
+      levelUpBonus,
+      newLevel,
+    };
   });
 
 /**

@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
-import { Coins, CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
+import { MargincoinIcon } from "@/lib/margin-coin";
 
 export const Route = createFileRoute("/_authenticated/modules/")({
   head: () => ({
@@ -115,7 +116,7 @@ function ModulesListPage() {
                   <Clock size={12} /> {total} {total === 1 ? "lección" : "lecciones"}
                 </span>
                 <span className="inline-flex items-center gap-1 font-semibold text-coin">
-                  <Coins size={12} /> +{m.coin_reward ?? 0}
+                  <MargincoinIcon size={12} /> +{m.coin_reward ?? 0}
                 </span>
               </div>
 

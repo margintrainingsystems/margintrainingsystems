@@ -5,11 +5,11 @@ import {
   Brain,
   Gamepad2,
   Trophy,
-  Coins,
   ChevronRight,
   CheckCircle2,
 } from "lucide-react";
 import { MARGIN_LOGO_WHITE } from "@/lib/margin-brand";
+import { MargincoinIcon } from "@/lib/margin-coin";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -58,7 +58,7 @@ const features = [
     desc: "Consignas dinámicas generadas por IA, distintas cada vez que jugás.",
   },
   {
-    icon: Coins,
+    icon: MargincoinIcon,
     title: "Margincoins",
     desc: "Sistema de recompensas que motiva de verdad. Canjeables por beneficios reales.",
   },

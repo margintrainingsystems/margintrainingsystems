@@ -1,15 +1,24 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - TanStack devtools (dev-only, first), tanstackStart, viteReact, tailwindcss, tsConfigPaths,
-//     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
-//     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import tsConfigPaths from "vite-tsconfig-paths";
+import netlify from "@netlify/vite-plugin-tanstack-start";
 
+// Config nativa de TanStack Start + Netlify (reemplaza el wrapper
+// @lovable.dev/vite-tanstack-config, que targeteaba Cloudflare por default
+// y dependía del runtime propio de Lovable). El sitio ahora se despliega
+// 100% en Netlify + Supabase, sin intermediarios de Lovable.
 export default defineConfig({
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
-  },
+  plugins: [
+    tsConfigPaths(),
+    tailwindcss(),
+    tanstackStart({
+      // Redirige el entry del servidor de TanStack Start a src/server.ts
+      // (nuestro wrapper de captura de errores en SSR).
+      server: { entry: "server" },
+    }),
+    viteReact(),
+    netlify(),
+  ],
 });

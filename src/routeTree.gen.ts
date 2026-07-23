@@ -14,9 +14,15 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSimulatorRouteImport } from './routes/_authenticated.simulator'
 import { Route as AuthenticatedRewardsRouteImport } from './routes/_authenticated.rewards'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated.onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedModulesIndexRouteImport } from './routes/_authenticated.modules.index'
+import { Route as AuthenticatedEmployerIndexRouteImport } from './routes/_authenticated.employer.index'
+import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp-webhook'
 import { Route as AuthenticatedModulesModuleIdRouteImport } from './routes/_authenticated.modules.$moduleId'
+import { Route as AuthenticatedEmployerInvitationsRouteImport } from './routes/_authenticated.employer.invitations'
+import { Route as AuthenticatedEmployerEmployeesRouteImport } from './routes/_authenticated.employer.employees'
+import { Route as AuthenticatedEmployerBillingRouteImport } from './routes/_authenticated.employer.billing'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -42,6 +48,11 @@ const AuthenticatedRewardsRoute = AuthenticatedRewardsRouteImport.update({
   path: '/rewards',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -53,10 +64,39 @@ const AuthenticatedModulesIndexRoute =
     path: '/modules/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedEmployerIndexRoute =
+  AuthenticatedEmployerIndexRouteImport.update({
+    id: '/employer/',
+    path: '/employer/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const ApiPublicMpWebhookRoute = ApiPublicMpWebhookRouteImport.update({
+  id: '/api/public/mp-webhook',
+  path: '/api/public/mp-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedModulesModuleIdRoute =
   AuthenticatedModulesModuleIdRouteImport.update({
     id: '/modules/$moduleId',
     path: '/modules/$moduleId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEmployerInvitationsRoute =
+  AuthenticatedEmployerInvitationsRouteImport.update({
+    id: '/employer/invitations',
+    path: '/employer/invitations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEmployerEmployeesRoute =
+  AuthenticatedEmployerEmployeesRouteImport.update({
+    id: '/employer/employees',
+    path: '/employer/employees',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEmployerBillingRoute =
+  AuthenticatedEmployerBillingRouteImport.update({
+    id: '/employer/billing',
+    path: '/employer/billing',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -64,18 +104,30 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/rewards': typeof AuthenticatedRewardsRoute
   '/simulator': typeof AuthenticatedSimulatorRoute
+  '/employer/billing': typeof AuthenticatedEmployerBillingRoute
+  '/employer/employees': typeof AuthenticatedEmployerEmployeesRoute
+  '/employer/invitations': typeof AuthenticatedEmployerInvitationsRoute
   '/modules/$moduleId': typeof AuthenticatedModulesModuleIdRoute
+  '/api/public/mp-webhook': typeof ApiPublicMpWebhookRoute
+  '/employer/': typeof AuthenticatedEmployerIndexRoute
   '/modules/': typeof AuthenticatedModulesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/rewards': typeof AuthenticatedRewardsRoute
   '/simulator': typeof AuthenticatedSimulatorRoute
+  '/employer/billing': typeof AuthenticatedEmployerBillingRoute
+  '/employer/employees': typeof AuthenticatedEmployerEmployeesRoute
+  '/employer/invitations': typeof AuthenticatedEmployerInvitationsRoute
   '/modules/$moduleId': typeof AuthenticatedModulesModuleIdRoute
+  '/api/public/mp-webhook': typeof ApiPublicMpWebhookRoute
+  '/employer': typeof AuthenticatedEmployerIndexRoute
   '/modules': typeof AuthenticatedModulesIndexRoute
 }
 export interface FileRoutesById {
@@ -84,9 +136,15 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/rewards': typeof AuthenticatedRewardsRoute
   '/_authenticated/simulator': typeof AuthenticatedSimulatorRoute
+  '/_authenticated/employer/billing': typeof AuthenticatedEmployerBillingRoute
+  '/_authenticated/employer/employees': typeof AuthenticatedEmployerEmployeesRoute
+  '/_authenticated/employer/invitations': typeof AuthenticatedEmployerInvitationsRoute
   '/_authenticated/modules/$moduleId': typeof AuthenticatedModulesModuleIdRoute
+  '/api/public/mp-webhook': typeof ApiPublicMpWebhookRoute
+  '/_authenticated/employer/': typeof AuthenticatedEmployerIndexRoute
   '/_authenticated/modules/': typeof AuthenticatedModulesIndexRoute
 }
 export interface FileRouteTypes {
@@ -95,18 +153,30 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/onboarding'
     | '/rewards'
     | '/simulator'
+    | '/employer/billing'
+    | '/employer/employees'
+    | '/employer/invitations'
     | '/modules/$moduleId'
+    | '/api/public/mp-webhook'
+    | '/employer/'
     | '/modules/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/onboarding'
     | '/rewards'
     | '/simulator'
+    | '/employer/billing'
+    | '/employer/employees'
+    | '/employer/invitations'
     | '/modules/$moduleId'
+    | '/api/public/mp-webhook'
+    | '/employer'
     | '/modules'
   id:
     | '__root__'
@@ -114,9 +184,15 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
+    | '/_authenticated/onboarding'
     | '/_authenticated/rewards'
     | '/_authenticated/simulator'
+    | '/_authenticated/employer/billing'
+    | '/_authenticated/employer/employees'
+    | '/_authenticated/employer/invitations'
     | '/_authenticated/modules/$moduleId'
+    | '/api/public/mp-webhook'
+    | '/_authenticated/employer/'
     | '/_authenticated/modules/'
   fileRoutesById: FileRoutesById
 }
@@ -124,6 +200,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -163,6 +240,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRewardsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -177,6 +261,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedModulesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/employer/': {
+      id: '/_authenticated/employer/'
+      path: '/employer'
+      fullPath: '/employer/'
+      preLoaderRoute: typeof AuthenticatedEmployerIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/mp-webhook': {
+      id: '/api/public/mp-webhook'
+      path: '/api/public/mp-webhook'
+      fullPath: '/api/public/mp-webhook'
+      preLoaderRoute: typeof ApiPublicMpWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/modules/$moduleId': {
       id: '/_authenticated/modules/$moduleId'
       path: '/modules/$moduleId'
@@ -184,22 +282,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedModulesModuleIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/employer/invitations': {
+      id: '/_authenticated/employer/invitations'
+      path: '/employer/invitations'
+      fullPath: '/employer/invitations'
+      preLoaderRoute: typeof AuthenticatedEmployerInvitationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/employer/employees': {
+      id: '/_authenticated/employer/employees'
+      path: '/employer/employees'
+      fullPath: '/employer/employees'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployeesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/employer/billing': {
+      id: '/_authenticated/employer/billing'
+      path: '/employer/billing'
+      fullPath: '/employer/billing'
+      preLoaderRoute: typeof AuthenticatedEmployerBillingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedRewardsRoute: typeof AuthenticatedRewardsRoute
   AuthenticatedSimulatorRoute: typeof AuthenticatedSimulatorRoute
+  AuthenticatedEmployerBillingRoute: typeof AuthenticatedEmployerBillingRoute
+  AuthenticatedEmployerEmployeesRoute: typeof AuthenticatedEmployerEmployeesRoute
+  AuthenticatedEmployerInvitationsRoute: typeof AuthenticatedEmployerInvitationsRoute
   AuthenticatedModulesModuleIdRoute: typeof AuthenticatedModulesModuleIdRoute
+  AuthenticatedEmployerIndexRoute: typeof AuthenticatedEmployerIndexRoute
   AuthenticatedModulesIndexRoute: typeof AuthenticatedModulesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedRewardsRoute: AuthenticatedRewardsRoute,
   AuthenticatedSimulatorRoute: AuthenticatedSimulatorRoute,
+  AuthenticatedEmployerBillingRoute: AuthenticatedEmployerBillingRoute,
+  AuthenticatedEmployerEmployeesRoute: AuthenticatedEmployerEmployeesRoute,
+  AuthenticatedEmployerInvitationsRoute: AuthenticatedEmployerInvitationsRoute,
   AuthenticatedModulesModuleIdRoute: AuthenticatedModulesModuleIdRoute,
+  AuthenticatedEmployerIndexRoute: AuthenticatedEmployerIndexRoute,
   AuthenticatedModulesIndexRoute: AuthenticatedModulesIndexRoute,
 }
 
@@ -211,17 +340,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

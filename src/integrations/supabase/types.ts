@@ -557,7 +557,7 @@ export type Database = {
       }
       plan_max_employees: { Args: { _plan: string }; Returns: number }
       redeem_invitation_code: {
-        Args: { _code: string; _user_id: string }
+        Args: { _code: string }
         Returns: {
           out_establishment_id: string
           out_position: string

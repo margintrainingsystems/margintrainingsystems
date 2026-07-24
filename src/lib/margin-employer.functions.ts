@@ -26,12 +26,17 @@ export const createEstablishment = createServerFn({ method: "POST" })
     z
       .object({
         name: z.string().min(2).max(120),
-        plan: z.enum(["basic", "pro", "business"]).default("basic"),
+        // Se acepta el campo por compatibilidad con el formulario de onboarding,
+        // pero NUNCA se usa para setear el plan directamente: un plan pago recién
+        // se activa cuando el webhook de Mercado Pago confirma el pago (ver
+        // /api/public/mp-webhook). Si no, cualquiera podría "elegir" Business gratis.
+        plan: z.enum(["basic", "pro", "business"]).default("basic").optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const wantedPaidPlan = data.plan && data.plan !== "basic" ? data.plan : null;
 
     // ¿Ya tiene uno? Si sí, igual nos aseguramos de que el rol 'owner' exista
     // (self-heal para cuentas afectadas por la falta histórica de política RLS de INSERT).
@@ -47,12 +52,14 @@ export const createEstablishment = createServerFn({ method: "POST" })
           { user_id: userId, role: "owner", establishment_id: existing.id },
           { onConflict: "user_id,role,establishment_id", ignoreDuplicates: true },
         );
-      return { establishmentId: existing.id, alreadyExisted: true };
+      return { establishmentId: existing.id, alreadyExisted: true, wantedPaidPlan };
     }
 
+    // Siempre se crea en 'basic', sin importar qué haya elegido el usuario en el
+    // formulario. Un plan pago se cobra y confirma después, desde /employer/billing.
     const { data: est, error } = await supabase
       .from("establishments")
-      .insert({ name: data.name, owner_id: userId, plan: data.plan })
+      .insert({ name: data.name, owner_id: userId, plan: "basic" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -66,20 +73,31 @@ export const createEstablishment = createServerFn({ method: "POST" })
 
     await supabase.from("profiles").update({ establishment_id: est.id }).eq("id", userId);
 
-    return { establishmentId: est.id, alreadyExisted: false };
+    // Devolvemos si quería un plan pago para que el front lo mande directo a pagar,
+    // en vez de dejarlo pensando que ya lo tiene activado.
+    return { establishmentId: est.id, alreadyExisted: false, wantedPaidPlan };
   });
 
-/** Cambia el plan del establecimiento. En prod real se dispara desde el webhook de MP. */
+/**
+ * Cambia el plan del establecimiento.
+ * Solo permite bajar a 'basic' (downgrade gratuito, sin fricción). Subir a un plan
+ * pago NUNCA pasa por acá con el cliente del usuario — eso lo hace el webhook de
+ * Mercado Pago (con supabaseAdmin, service role) una vez que el pago está confirmado.
+ * Si se necesita un plan pago, hay que ir por /employer/billing → createCheckoutSession.
+ */
 export const updatePlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ plan: z.enum(["basic", "pro", "business"]) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ plan: z.enum(["basic", "pro", "business"]) }).parse(input))
   .handler(async ({ data, context }) => {
+    if (data.plan !== "basic") {
+      throw new Error(
+        "Los planes pagos se activan al confirmarse el pago con Mercado Pago, no se pueden asignar directamente. Usá 'Pagar con MP' desde Suscripción.",
+      );
+    }
     const { supabase, userId } = context;
     const { data: est, error } = await supabase
       .from("establishments")
-      .update({ plan: data.plan })
+      .update({ plan: "basic" })
       .eq("owner_id", userId)
       .select("id, plan, max_employees")
       .maybeSingle();

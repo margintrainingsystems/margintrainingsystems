@@ -33,13 +33,22 @@ export const createEstablishment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // ¿Ya tiene uno?
+    // ¿Ya tiene uno? Si sí, igual nos aseguramos de que el rol 'owner' exista
+    // (self-heal para cuentas afectadas por la falta histórica de política RLS de INSERT).
     const { data: existing } = await supabase
       .from("establishments")
       .select("id")
       .eq("owner_id", userId)
       .maybeSingle();
-    if (existing) return { establishmentId: existing.id, alreadyExisted: true };
+    if (existing) {
+      await supabase
+        .from("user_roles")
+        .upsert(
+          { user_id: userId, role: "owner", establishment_id: existing.id },
+          { onConflict: "user_id,role,establishment_id", ignoreDuplicates: true },
+        );
+      return { establishmentId: existing.id, alreadyExisted: true };
+    }
 
     const { data: est, error } = await supabase
       .from("establishments")
@@ -48,11 +57,13 @@ export const createEstablishment = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    await supabase.from("user_roles").insert({
+    const { error: roleError } = await supabase.from("user_roles").insert({
       user_id: userId,
       role: "owner",
       establishment_id: est.id,
     });
+    if (roleError) throw new Error(roleError.message);
+
     await supabase.from("profiles").update({ establishment_id: est.id }).eq("id", userId);
 
     return { establishmentId: est.id, alreadyExisted: false };

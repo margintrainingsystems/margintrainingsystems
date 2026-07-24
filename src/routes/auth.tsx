@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { redeemInvitationCode } from "@/lib/margin-invitation.functions";
 import { MARGIN_LOGO_WHITE } from "@/lib/margin-brand";
 import { Loader2, Mail, Lock, User, Ticket, Building2 } from "lucide-react";
 
@@ -22,6 +24,7 @@ type Mode = "signin" | "signup-employer" | "signup-employee";
 
 function AuthPage() {
   const navigate = useNavigate();
+  const redeem = useServerFn(redeemInvitationCode);
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,15 +32,14 @@ function AuthPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Solo el ingreso normal (signin) navega automáticamente al detectar sesión.
+  // El signup maneja su propia navegación en handleSubmit, para poder validar
+  // el código de invitación (o crear el establecimiento) ANTES de entrar a la app.
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session && mode === "signin") navigate({ to: "/dashboard" });
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") navigate({ to: "/dashboard" });
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, mode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +48,7 @@ function AuthPage() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        navigate({ to: "/dashboard" });
         return;
       }
 
@@ -58,24 +61,35 @@ function AuthPage() {
           data: {
             full_name: fullName,
             signup_intent: mode === "signup-employer" ? "employer" : "employee",
-            pending_invite_code: mode === "signup-employee" ? inviteCode.trim().toUpperCase() : null,
           },
         },
       });
       if (error) throw error;
 
-      // Si el usuario ya quedó logueado (auto-confirm ON), guardamos el intent para el onboarding.
-      if (signUpData.session) {
-        window.sessionStorage.setItem(
-          "margin_pending_signup",
-          JSON.stringify({
-            intent: mode === "signup-employer" ? "employer" : "employee",
-            code: mode === "signup-employee" ? inviteCode.trim().toUpperCase() : null,
-          }),
-        );
-        toast.success("¡Cuenta creada!");
-      } else {
+      // Sin sesión activa todavía (falta confirmar el email): no hay nada más
+      // para hacer acá, el usuario confirma por mail y después inicia sesión.
+      if (!signUpData.session) {
         toast.success("¡Cuenta creada!", { description: "Revisá tu email para confirmar." });
+        return;
+      }
+
+      if (mode === "signup-employee") {
+        // Validamos el código YA, antes de dejar entrar al usuario a la app.
+        // Si no existe / está vencido / sin cupo, no lo dejamos pasar.
+        try {
+          await redeem({ data: { code: inviteCode.trim().toUpperCase() } });
+          toast.success("¡Bienvenido al equipo!");
+          navigate({ to: "/dashboard" });
+        } catch (redeemErr) {
+          await supabase.auth.signOut();
+          toast.error(
+            redeemErr instanceof Error ? redeemErr.message : "Código de invitación inválido",
+          );
+        }
+      } else {
+        // Empleador: todavía necesita crear su establecimiento.
+        toast.success("¡Cuenta creada!");
+        navigate({ to: "/onboarding" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error de autenticación");
@@ -135,6 +149,7 @@ function AuthPage() {
               <IconField icon={<Ticket size={16} />}>
                 <input
                   required
+                  minLength={4}
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   placeholder="Código de invitación"

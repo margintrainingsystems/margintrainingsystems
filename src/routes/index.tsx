@@ -208,8 +208,14 @@ function LandingPage() {
             <span>© {new Date().getFullYear()} MARGIN Training Systems</span>
           </div>
           <div className="flex gap-5">
-            <a href="mailto:hola@margints.com" className="hover:text-foreground">
+            <a href="mailto:margintrainingsystems@gmail.com" className="hover:text-foreground">
               Contacto
+            </a>
+            <a href="https://wa.me/5491172710155" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              WhatsApp
+            </a>
+            <a href="https://instagram.com/joinmargin" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              Instagram
             </a>
           </div>
         </div>

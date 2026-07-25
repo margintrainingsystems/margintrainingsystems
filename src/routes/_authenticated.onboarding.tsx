@@ -102,8 +102,8 @@ function OnboardingPage() {
             <label className="mb-2 block text-sm font-medium">Plan inicial</label>
             <div className="grid gap-2 sm:grid-cols-3">
               <PlanRadio value="basic" current={plan} setPlan={setPlan} label="Básico" price="Gratis" seats="Hasta 2" />
-              <PlanRadio value="pro" current={plan} setPlan={setPlan} label="Pro" price="USD 14.99/mes" seats="Hasta 10" />
-              <PlanRadio value="business" current={plan} setPlan={setPlan} label="Business" price="USD 19.99/mes" seats="Sin límite" />
+              <PlanRadio value="pro" current={plan} setPlan={setPlan} label="Pro" price="ARS 25.000/mes" seats="Hasta 10" />
+              <PlanRadio value="business" current={plan} setPlan={setPlan} label="Business" price="ARS 32.000/mes" seats="Sin límite" />
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               Empezás en Básico gratis. Podés cambiar de plan y pagar con Mercado Pago desde el panel.

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { listEmployees, updatePlan } from "@/lib/margin-employer.functions";
+import { listEmployees, updatePlan, PLANS as PLAN_PRICES } from "@/lib/margin-employer.functions";
 import { createCheckoutSession } from "@/lib/margin-payments.functions";
 import { Check, Loader2, ExternalLink } from "lucide-react";
 
@@ -35,14 +35,14 @@ const PLANS: {
   {
     key: "pro",
     label: "Pro",
-    price: "USD 14.99/mes",
+    price: `ARS ${PLAN_PRICES.pro.price.toLocaleString("es-AR")}/mes`,
     seats: "Hasta 10 empleados",
     features: ["Todo lo del Básico", "Analytics del equipo", "Recompensas premium", "Soporte prioritario"],
   },
   {
     key: "business",
     label: "Business",
-    price: "USD 19.99/mes",
+    price: `ARS ${PLAN_PRICES.business.price.toLocaleString("es-AR")}/mes`,
     seats: "Empleados ilimitados",
     features: ["Todo lo del Pro", "Cursos personalizados", "IA de entrevistas + CV", "SLA dedicado"],
   },

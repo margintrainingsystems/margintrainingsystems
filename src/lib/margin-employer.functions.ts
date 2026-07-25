@@ -2,11 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Planes soportados. El límite de empleados lo aplica un trigger de Postgres. */
+/** Planes soportados. Precios fijos en ARS (Mercado Pago Argentina liquida en ARS,
+ *  así que se definen directamente en pesos en vez de convertir desde USD). El
+ *  límite de empleados lo aplica un trigger de Postgres. */
 export const PLANS = {
-  basic: { label: "Básico", price: 0, maxEmployees: 2, currency: "USD" },
-  pro: { label: "Pro", price: 14.99, maxEmployees: 10, currency: "USD" },
-  business: { label: "Business", price: 19.99, maxEmployees: 999999, currency: "USD" },
+  basic: { label: "Básico", price: 0, maxEmployees: 2, currency: "ARS" },
+  pro: { label: "Pro", price: 25000, maxEmployees: 10, currency: "ARS" },
+  business: { label: "Business", price: 32000, maxEmployees: 999999, currency: "ARS" },
 } as const;
 export type PlanKey = keyof typeof PLANS;
 

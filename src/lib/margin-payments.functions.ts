@@ -8,13 +8,16 @@ import { PLANS } from "@/lib/margin-employer.functions";
  * MERCADO PAGO — precios fijos en ARS
  * =============================================================================
  * Precios definidos directamente en pesos en PLANS (margin-employer.functions.ts):
- * Pro ARS 25.000/mes, Business ARS 32.000/mes. Si en algún momento hay que
- * actualizarlos por inflación/devaluación, se cambia ahí — Mercado Pago no
- * reajusta solo el monto de una suscripción recurrente ya creada.
+ * Pro ARS 25.000/mes, Business ARS 32.000/mes.
+ *
+ * external_reference se arma como "<establishmentId>::<plan>" para que el
+ * webhook (api.public.mp-webhook.ts) sepa a qué establecimiento y a qué plan
+ * corresponde el pago sin tener que guardar estado intermedio en la base.
  *
  * SWAP ZONE al migrar a Netlify:
- *   - MP_ACCESS_TOKEN → access token real de Mercado Pago
- *   - Configurar el webhook público en /api/public/mp-webhook
+ *   - MP_ACCESS_TOKEN → access token real (producción) de Mercado Pago
+ *   - MP_WEBHOOK_SECRET → clave secreta del webhook (dashboard de MP)
+ *   - Configurar la URL pública del webhook en el dashboard de Mercado Pago
  * =============================================================================
  */
 
@@ -35,7 +38,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const { data: authUser } = await supabase.auth.getUser();
     const payerEmail = authUser?.user?.email;
     const arsAmount = PLANS[data.plan].price;
-
     const accessToken = process.env.MP_ACCESS_TOKEN;
 
     if (!accessToken) {
@@ -46,7 +48,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       };
     }
 
-    // Creación real de la suscripción recurrente en Mercado Pago.
     const res = await fetch("https://api.mercadopago.com/preapproval", {
       method: "POST",
       headers: {
@@ -55,7 +56,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         reason: `MARGIN — Plan ${PLANS[data.plan].label}`,
-        external_reference: est.id,
+        // "<establishmentId>::<plan>" — el webhook lo separa para saber qué activar.
+        external_reference: `${est.id}::${data.plan}`,
         payer_email: payerEmail,
         auto_recurring: {
           frequency: 1,
@@ -63,13 +65,19 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           transaction_amount: arsAmount,
           currency_id: "ARS",
         },
-        back_url: "https://margin-training-systems.netlify.app/employer/billing",
+        back_url: "https://margints.netlify.app/employer/billing",
         status: "pending",
       }),
     });
-    const json = (await res.json()) as { init_point?: string; message?: string };
+    const json = (await res.json()) as { id?: string; init_point?: string; message?: string };
     if (!res.ok || !json.init_point) {
       throw new Error(json.message ?? "No se pudo crear la suscripción en Mercado Pago");
+    }
+
+    // Guardamos el preapproval_id ya mismo (no esperamos al webhook para esto),
+    // así queda trazado incluso si el pago nunca se confirma.
+    if (json.id) {
+      await supabase.from("establishments").update({ mp_preapproval_id: json.id }).eq("id", est.id);
     }
 
     return { initPoint: json.init_point, mode: "live" as const, arsAmount };

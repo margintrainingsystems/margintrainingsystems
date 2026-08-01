@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { redeemInvitationCode } from "@/lib/margin-invitation.functions";
+import { redeemInvitationCode, checkInvitationCode } from "@/lib/margin-invitation.functions";
 import { MARGIN_LOGO_WHITE } from "@/lib/margin-brand";
 import { Loader2, Mail, Lock, User, Ticket, Building2 } from "lucide-react";
 
@@ -25,6 +25,7 @@ type Mode = "signin" | "signup-employer" | "signup-employee";
 function AuthPage() {
   const navigate = useNavigate();
   const redeem = useServerFn(redeemInvitationCode);
+  const checkCode = useServerFn(checkInvitationCode);
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,6 +54,20 @@ function AuthPage() {
       }
 
       // Signup (empleador o empleado)
+
+      // Para empleado: validamos el código ANTES de crear la cuenta. Si no,
+      // un código inválido igual dejaba un usuario "huérfano" creado en
+      // Supabase (sin rol ni establecimiento) y el mail quedaba trabado con
+      // "already registered" para siempre.
+      if (mode === "signup-employee") {
+        const check = await checkCode({ data: { code: inviteCode.trim().toUpperCase() } });
+        if (!check.valid) {
+          toast.error("Código de invitación inválido");
+          setBusy(false);
+          return;
+        }
+      }
+
       const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,

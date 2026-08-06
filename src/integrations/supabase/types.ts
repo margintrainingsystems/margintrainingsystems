@@ -548,11 +548,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_lesson: {
+        Args: { p_lesson_id: string; p_score?: number | null }
+        Returns: {
+          already_completed: boolean
+          xp_awarded: number
+          course_completed: boolean
+          coins_awarded: number
+          level_up_bonus: number
+          new_level: number
+        }[]
+      }
+      get_my_pending_course_coins: {
+        Args: { p_course_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_completed_course: {
+        Args: { p_course_id: string; p_user_id: string }
         Returns: boolean
       }
       plan_max_employees: { Args: { _plan: string }; Returns: number }
@@ -562,6 +581,17 @@ export type Database = {
           out_establishment_id: string
           out_position: string
         }[]
+      }
+      redeem_reward: {
+        Args: { p_reward_id: string }
+        Returns: {
+          id: string
+          user_id: string
+          reward_id: string
+          cost_coins: number
+          status: string | null
+          redeemed_at: string
+        }
       }
     }
     Enums: {

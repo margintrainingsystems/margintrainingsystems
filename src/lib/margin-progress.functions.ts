@@ -3,8 +3,20 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Marca una lección como completada y otorga XP + margincoins al usuario.
- * Idempotente: si ya está completada, no duplica recompensas.
+ * Marca una lección como completada.
+ *
+ * Modelo de negocio: XP y nivel se otorgan al instante por cada lección
+ * (como antes). Los margincoins de cada lección quedan RETENIDOS hasta que
+ * el usuario completa el 100% de las lecciones del curso al que pertenece
+ * esa lección — recién ahí se acreditan todos juntos, de una sola vez, al
+ * balance real (profiles.margincoins).
+ *
+ * Antes: esta función calculaba y escribía todo en JS con múltiples
+ * llamadas HTTP separadas sin lock (mismo patrón de riesgo de condición de
+ * carrera que tenía redeemReward). Ahora delega TODO el cálculo y la
+ * escritura a la función atómica `complete_lesson` en Postgres, que bloquea
+ * la fila de `profiles` del usuario (`FOR UPDATE`) antes de leer/escribir,
+ * serializando completions concurrentes.
  */
 export const completeLesson = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -17,143 +29,88 @@ export const completeLesson = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase } = context;
 
-    // 1) Buscar la lección para saber recompensas y módulo.
-    const { data: lesson, error: lessonErr } = await supabase
-      .from("lessons")
-      .select("id, module_id, xp_reward, coin_reward")
-      .eq("id", data.lessonId)
-      .maybeSingle();
-    if (lessonErr) throw new Error(lessonErr.message);
-    if (!lesson) throw new Error("Lección no encontrada");
-
-    // 2) ¿Ya la había completado? -> no duplicar.
-    const { data: existing } = await supabase
-      .from("user_progress")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("lesson_id", data.lessonId)
-      .maybeSingle();
-
-    if (existing) {
-      return { alreadyCompleted: true, xpAwarded: 0, coinsAwarded: 0 };
-    }
-
-    // 3) Insertar progreso.
-    const { error: progressErr } = await supabase.from("user_progress").insert({
-      user_id: userId,
-      lesson_id: lesson.id,
-      module_id: lesson.module_id,
-      score: data.score ?? null,
+    const { data: result, error } = await supabase.rpc("complete_lesson", {
+      p_lesson_id: data.lessonId,
+      p_score: data.score ?? null,
     });
-    if (progressErr) throw new Error(progressErr.message);
 
-    // 4) Actualizar el perfil (leer y sumar bajo RLS del propio usuario).
-    const xp = lesson.xp_reward ?? 0;
-    const coins = lesson.coin_reward ?? 0;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("total_xp, margincoins, level")
-      .eq("id", userId)
-      .maybeSingle();
-
-    const newXp = (profile?.total_xp ?? 0) + xp;
-    const newLevel = Math.max(1, Math.floor(newXp / 500) + 1);
-
-    // Bonus de margincoins por subir de nivel: 50 * (nivel - 1) por CADA nivel ganado
-    // en esta llamada (cubre el caso, poco probable, de saltar más de un nivel de una vez).
-    const previousLevel = Math.max(1, Math.floor((profile?.total_xp ?? 0) / 500) + 1);
-    let levelUpBonus = 0;
-    for (let lvl = previousLevel + 1; lvl <= newLevel; lvl++) {
-      levelUpBonus += 50 * (lvl - 1);
+    if (error) {
+      throw new Error(error.message);
     }
 
-    const newCoins = (profile?.margincoins ?? 0) + coins + levelUpBonus;
-
-    await supabase
-      .from("profiles")
-      .update({
-        total_xp: newXp,
-        margincoins: newCoins,
-        level: newLevel,
-        last_activity_date: new Date().toISOString().slice(0, 10),
-      })
-      .eq("id", userId);
-
-    if (coins > 0) {
-      await supabase.from("margincoins_transactions").insert({
-        user_id: userId,
-        amount: coins,
-        reason: "lesson_completed",
-        description: "Lección completada",
-      });
-    }
-
-    if (levelUpBonus > 0) {
-      await supabase.from("margincoins_transactions").insert({
-        user_id: userId,
-        amount: levelUpBonus,
-        reason: "level_up_bonus",
-        description: `Subiste a nivel ${newLevel}`,
-      });
-    }
+    // La función retorna TABLE(...), supabase-js la devuelve como array de 1 fila.
+    const row = Array.isArray(result) ? result[0] : result;
 
     return {
-      alreadyCompleted: false,
-      xpAwarded: xp,
-      coinsAwarded: coins,
-      levelUpBonus,
-      newLevel,
+      alreadyCompleted: row?.already_completed ?? false,
+      xpAwarded: row?.xp_awarded ?? 0,
+      courseCompleted: row?.course_completed ?? false,
+      // coinsAwarded solo es > 0 si esta lección completó el curso entero:
+      // ahí es cuando se acredita todo lo retenido de una sola vez.
+      coinsAwarded: row?.coins_awarded ?? 0,
+      levelUpBonus: row?.level_up_bonus ?? 0,
+      newLevel: row?.new_level ?? 1,
     };
   });
 
 /**
+ * Coins pendientes (retenidos) del usuario actual en un curso que todavía
+ * no completó al 100%. Útil para mostrar un contador de progreso tipo
+ * "llevás acumulados 450 de 650 margincoins de este curso" en la UI,
+ * sin que esos coins estén todavía en el balance real.
+ */
+export const getPendingCourseCoins = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ courseId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: pending, error } = await supabase.rpc("get_my_pending_course_coins", {
+      p_course_id: data.courseId,
+    });
+
+    if (error) throw new Error(error.message);
+
+    return { pendingCoins: pending ?? 0 };
+  });
+
+/**
  * Canjear una recompensa por margincoins.
+ *
+ * Antes: hacía 3 operaciones separadas (SELECT balance -> validar en JS ->
+ * INSERT redemption -> UPDATE profiles con el balance leído al principio).
+ * Sin lock entre ellas, dos canjes disparados casi al mismo tiempo (doble
+ * click, dos pestañas) podían leer el mismo balance antes de que ninguno
+ * terminara de escribir: ambos pasaban la validación y el segundo UPDATE
+ * pisaba el resultado del primero en vez de acumularse, permitiendo
+ * canjear más de una recompensa pagando el costo de una sola.
+ *
+ * Ahora: una sola llamada RPC a `redeem_reward`, que corre en un único
+ * statement en Postgres con `SELECT ... FOR UPDATE` sobre la fila de
+ * `profiles` del usuario. Eso serializa canjes concurrentes del mismo
+ * usuario (el segundo espera a que el primero confirme o falle antes de
+ * leer el balance), y también valida stock, aislamiento por
+ * establecimiento y curso requerido (100% de lecciones) del lado servidor,
+ * sin depender de nada que el cliente pueda manipular.
  */
 export const redeemReward = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ rewardId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase } = context;
 
-    const { data: reward, error: rewardErr } = await supabase
-      .from("rewards")
-      .select("id, cost_coins, title, stock, is_active")
-      .eq("id", data.rewardId)
-      .maybeSingle();
-    if (rewardErr) throw new Error(rewardErr.message);
-    if (!reward || !reward.is_active) throw new Error("Recompensa no disponible");
-    if (reward.stock !== null && reward.stock <= 0) throw new Error("Sin stock");
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("margincoins")
-      .eq("id", userId)
-      .maybeSingle();
-
-    const balance = profile?.margincoins ?? 0;
-    if (balance < reward.cost_coins) throw new Error("No tenés suficientes margincoins");
-
-    const { error: redeemErr } = await supabase.from("reward_redemptions").insert({
-      user_id: userId,
-      reward_id: reward.id,
-      cost_coins: reward.cost_coins,
-    });
-    if (redeemErr) throw new Error(redeemErr.message);
-
-    await supabase
-      .from("profiles")
-      .update({ margincoins: balance - reward.cost_coins })
-      .eq("id", userId);
-
-    await supabase.from("margincoins_transactions").insert({
-      user_id: userId,
-      amount: -reward.cost_coins,
-      reason: "reward_redeemed",
-      description: `Canjeaste: ${reward.title}`,
+    const { data: redemption, error } = await supabase.rpc("redeem_reward", {
+      p_reward_id: data.rewardId,
     });
 
-    return { ok: true };
+    if (error) {
+      // El mensaje viene directo del RAISE EXCEPTION en la función de Postgres
+      // (ej. "Saldo insuficiente de MARGINCOINS", "Sin stock disponible",
+      // "Debés completar el curso requerido antes de canjear esta recompensa").
+      throw new Error(error.message);
+    }
+
+    return { ok: true, redemption };
   });

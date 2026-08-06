@@ -80,9 +80,19 @@ function ModuleDetailPage() {
       const res = await completeFn({ data: { lessonId: lesson.id } });
       if (res.alreadyCompleted) {
         toast.info("Ya habías completado esta lección");
+      } else if (res.courseCompleted) {
+        // Esta lección completó el curso entero: recién ahora se acreditan
+        // TODOS los margincoins que se venían acumulando lección a lección.
+        toast.success(`¡Curso completo! +${res.coinsAwarded} margincoins`, {
+          description: `+${res.xpAwarded} XP sumados. Ya podés usar tus margincoins en la tienda.`,
+        });
+        setCompleted((prev) => new Set(prev).add(lesson.id));
+        router.invalidate();
       } else {
-        toast.success(`¡+${res.coinsAwarded} margincoins!`, {
-          description: `+${res.xpAwarded} XP sumados`,
+        // Lección normal: los margincoins de esta lección quedan retenidos
+        // hasta terminar el curso, solo se muestra el XP ganado al instante.
+        toast.success(`+${res.xpAwarded} XP`, {
+          description: "Tus margincoins de este curso se acreditan al completarlo entero.",
         });
         setCompleted((prev) => new Set(prev).add(lesson.id));
         router.invalidate();
